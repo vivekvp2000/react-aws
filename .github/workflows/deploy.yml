@@ -1,0 +1,30 @@
+name: Deploy React App to EC2
+
+on:
+  push:
+    branches: ["master"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Deploy to EC2
+      env:
+        EC2_USER: ubuntu
+        EC2_HOST: your-ec2-public-ip
+        PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+      run: |
+        echo "${PRIVATE_KEY}" > private_key.pem
+        chmod 600 private_key.pem
+        scp -o StrictHostKeyChecking=no -i private_key.pem -r . ubuntu@${EC2_HOST}:/home/ubuntu/app
+        ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${EC2_HOST} << 'EOF'
+          cd /home/ubuntu/app
+          npm install
+          npm run build
+          pm2 stop all || true
+          pm2 serve dist 5173 --spa
+        EOF
