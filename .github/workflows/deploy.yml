@@ -2,9 +2,9 @@ name: Deploy React App to EC2
 
 on:
   push:
-    branches: ["main"]  # Changed from "master" to "main"
+    branches: ["main"]
   pull_request:
-    branches: ["main"]  # Changed from "master" to "main"
+    branches: ["main"]
 
 jobs:
   deploy:
@@ -20,9 +20,20 @@ jobs:
         EC2_HOST: 3.108.235.105
         PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
       run: |
+        # Save private key to file and set correct permissions
         echo "${PRIVATE_KEY}" > private_key.pem
         chmod 600 private_key.pem
-        scp -o StrictHostKeyChecking=no -i private_key.pem -r . ubuntu@${EC2_HOST}:/home/ubuntu/app
+
+        # Ensure the destination directory on EC2 has the right permissions
+        ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${EC2_HOST} << 'EOF'
+          sudo chown -R ubuntu:ubuntu /home/ubuntu/app
+          sudo chmod -R 755 /home/ubuntu/app
+        EOF
+
+        # Copy files excluding .git directory
+        scp -o StrictHostKeyChecking=no -i private_key.pem -r ./* ubuntu@${EC2_HOST}:/home/ubuntu/app
+
+        # SSH into EC2 and run deployment commands
         ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${EC2_HOST} << 'EOF'
           cd /home/ubuntu/app
           npm install
