@@ -1,4 +1,4 @@
 function App() {
-  return <h1>React AWS with CICD...!!!</h1>
+  return <h1>GO Go Go</h1>
 }
 export default App
